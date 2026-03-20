@@ -147,6 +147,54 @@ Copy the `encoded` value from the response and set it as `datastream.token` in `
 
 ---
 
+## Serving via Apache httpd (bastion)
+
+Docker runs on the **remote host**. Apache runs on the **bastion** and reverse-proxies to it.
+
+```
+Browser → https://bastion/portal/
+          Apache ProxyPass → http://REMOTE_HOST_IP:9229/
+          Docker container → Flask :9229
+```
+
+### Apache config
+
+Add the contents of `httpd-add-to-existing.conf` inside your existing `<VirtualHost>` block:
+
+```bash
+sudo vi /etc/httpd/conf.d/your-existing.conf
+# paste contents of httpd-add-to-existing.conf inside <VirtualHost>
+
+sudo httpd -t && sudo systemctl reload httpd
+```
+
+Replace `REMOTE_HOST_IP` with the IP of the host running Docker.
+
+| URL | What |
+|---|---|
+| `https://bastion/portal/` | Client onboarding request form |
+| `https://bastion/health` | Health check endpoint |
+
+### Required Apache modules
+
+```bash
+httpd -M | grep -E 'proxy|headers'
+# proxy_module, proxy_http_module, headers_module must be listed
+```
+
+### Run Docker on the remote host (production)
+
+Bind to all interfaces so the bastion can reach it — restrict access at the network/firewall level:
+
+```bash
+docker run -d --name cribl-portal --restart unless-stopped \
+  -p 9229:9229 \
+  -v /path/to/config.json:/app/config.json:ro \
+  cribl-portal
+```
+
+---
+
 ## Elasticsearch — ILM Policy and Datastream Template
 
 Run these in **Kibana → Management → Dev Tools** before the first document is indexed. Apply them in order.

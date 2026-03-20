@@ -8,14 +8,14 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #0f1117;
-      --surface: #1a1d27;
-      --border:  #2e3148;
-      --accent:  #ff4b4b;
-      --accent2: #0ea5e9;
-      --text:    #e2e8f0;
-      --muted:   #94a3b8;
-      --success: #22c55e;
+      --bg:      #f8fafc;
+      --surface: #ffffff;
+      --border:  #e2e8f0;
+      --accent:  #e53e3e;
+      --accent2: #0284c7;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --success: #16a34a;
       --radius:  8px;
     }
 
@@ -57,7 +57,7 @@
       font-weight: 600;
       letter-spacing: .4px;
       text-transform: uppercase;
-      background: #1e3a5f;
+      background: #e0f2fe;
       color: var(--accent2);
     }
 
@@ -161,9 +161,9 @@
       display: flex;
       align-items: center;
       gap: 5px;
-      background: rgba(14,165,233,.15);
-      border: 1px solid rgba(14,165,233,.3);
-      color: #7dd3fc;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
       border-radius: 4px;
       padding: 2px 8px;
       font-size: .83rem;
@@ -173,7 +173,7 @@
     .tag-remove {
       background: none;
       border: none;
-      color: #7dd3fc;
+      color: #0369a1;
       cursor: pointer;
       font-size: .85rem;
       padding: 0;
@@ -209,7 +209,7 @@
     }
     .error-box.visible { display: block; }
     .error-box ul { padding-left: 18px; }
-    .error-box li { color: #f87171; font-size: .87rem; }
+    .error-box li { color: #b91c1c; font-size: .87rem; }
 
     /* ── Submit button ── */
     .btn-submit {
@@ -293,6 +293,7 @@
       font-weight: 700;
       color: var(--accent2);
     }
+    .success-icon { background: #dcfce7; }
     .copy-btn {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -495,7 +496,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Submitting…';
 
-    fetch('/api/submit', {
+    fetch('/portal/api/submit', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ app_id: appId, app_name: appName, region, groups: tags }),

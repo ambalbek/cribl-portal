@@ -137,8 +137,8 @@ def es_index(doc: dict, config: dict) -> str:
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.route("/")
-@app.route("/request")
-@app.route("/request/")
+@app.route("/portal")
+@app.route("/portal/")
 def index():
     try:
         config = load_config()
@@ -148,6 +148,7 @@ def index():
     return render_template("request.html")
 
 
+@app.route("/portal/api/submit", methods=["POST"])
 @app.route("/api/submit", methods=["POST"])
 def submit():
     data     = request.get_json(silent=True) or {}
