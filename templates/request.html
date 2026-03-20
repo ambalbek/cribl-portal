@@ -500,9 +500,13 @@
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ app_id: appId, app_name: appName, region, groups: tags }),
     })
-    .then(res => res.json())
-    .then(data => {
+    .then(res => {
+      console.log('[portal] submit response — status:', res.status, 'url:', res.url);
+      return res.json().then(data => ({ status: res.status, data }));
+    })
+    .then(({ status, data }) => {
       if (data.errors) {
+        console.error('[portal] server errors:', data.errors);
         errorList.innerHTML = data.errors.map(e => `<li>${e}</li>`).join('');
         errorBox.classList.add('visible');
         btn.disabled = false;
@@ -513,8 +517,9 @@
         document.getElementById('success-state').classList.add('visible');
       }
     })
-    .catch(() => {
-      errorList.innerHTML = '<li>Network error — please try again.</li>';
+    .catch(err => {
+      console.error('[portal] fetch failed:', err);
+      errorList.innerHTML = `<li>Request failed: ${err.message} — check browser console for details.</li>`;
       errorBox.classList.add('visible');
       btn.disabled = false;
       btn.innerHTML = 'Submit Request';

@@ -85,6 +85,12 @@ def _after(response):
     return response
 
 
+@app.errorhandler(404)
+def _not_found(exc):
+    log.warning("404 Not Found: %s %s", request.method, request.path)
+    return jsonify({"errors": [f"Not found: {request.path}"]}), 404
+
+
 @app.errorhandler(Exception)
 def _handle_exception(exc):
     if isinstance(exc, HTTPException):
@@ -147,11 +153,17 @@ def index():
 @app.route("/portal/api/submit", methods=["POST"])
 @app.route("/api/submit", methods=["POST"])
 def submit():
+    log.debug("submit — Content-Type: %s  body: %s",
+              request.content_type, request.get_data(as_text=True)[:500])
+
     data     = request.get_json(silent=True) or {}
     app_id   = (data.get("app_id")   or "").strip()
     app_name = (data.get("app_name") or "").strip()
     region   = (data.get("region")   or "").strip()
     groups   = [grp for grp in (data.get("groups") or []) if grp]
+
+    log.info("submit — app_id=%r  app_name=%r  region=%r  groups=%s",
+             app_id, app_name, region, groups)
 
     errors = []
     if not app_id:                        errors.append("App ID is required.")
@@ -182,11 +194,13 @@ def submit():
     }
 
     try:
+        log.info("indexing to ES — index=%s  request_id=%s",
+                 config.get("datastream", {}).get("index", "cribl-onboarding-requests"),
+                 request_id)
         es_id = es_index(doc, config)
-        log.info("submitted  request_id=%s  app_id=%s  region=%s  groups=%s  es_id=%s",
-                 request_id, app_id, region, groups, es_id)
+        log.info("ES index OK — request_id=%s  es_id=%s", request_id, es_id)
     except Exception as exc:
-        log.error("ES index failed: %s", exc)
+        log.error("ES index failed — %s: %s", type(exc).__name__, exc)
         return jsonify({"errors": [f"Failed to store request: {exc}"]}), 500
 
     return jsonify({"request_id": request_id})
