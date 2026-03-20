@@ -109,12 +109,17 @@ def load_config() -> dict:
 def es_index(doc: dict, config: dict) -> str:
     """Write a document to the configured ES datastream. Returns the ES _id."""
     ds       = config.get("datastream", {})
-    base_url = ds.get("elk_url", "").rstrip("/")
+    base_url = ds.get("elk_url", "").strip().rstrip("/")
     index    = ds.get("index", "cribl-onboarding-requests")
     skip_ssl = ds.get("skip_ssl", False)
+    timeout  = ds.get("timeout", 30)
 
     if not base_url:
         raise ValueError("datastream.elk_url is not configured in config.json")
+
+    if not base_url.startswith(("http://", "https://")):
+        base_url = "https://" + base_url
+        log.debug("elk_url had no scheme — prepended https://: %s", base_url)
 
     if skip_ssl:
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -135,7 +140,7 @@ def es_index(doc: dict, config: dict) -> str:
         f"{base_url}/{index}/_doc",
         json=doc,
         headers=headers,
-        timeout=10,
+        timeout=timeout,
     )
     resp.raise_for_status()
     return resp.json().get("_id", "unknown")
