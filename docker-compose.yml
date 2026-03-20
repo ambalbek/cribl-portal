@@ -1,0 +1,15 @@
+services:
+  cribl-portal:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:9229:9229"
+    volumes:
+      - ./config.json:/app/config.json:ro    # secrets never in image
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:9229/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

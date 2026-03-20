@@ -263,7 +263,7 @@ def admin_update_status():
         session.auth = (username, password)
 
     payload = {
-        "query":  {"term": {"request_id.keyword": request_id}},
+        "query":  {"term": {"request_id": request_id}},
         "script": {"source": f"ctx._source.status = '{status}'", "lang": "painless"},
     }
 

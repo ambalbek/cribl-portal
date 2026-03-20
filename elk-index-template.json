@@ -1,0 +1,22 @@
+{
+  "index_patterns": ["cribl-onboarding-requests*"],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp":         { "type": "date" },
+        "request_id":         { "type": "keyword" },
+        "apmid":              { "type": "keyword" },
+        "appname":            { "type": "keyword" },
+        "region":             { "type": "keyword" },
+        "entitlement_groups": { "type": "keyword" },
+        "status":             { "type": "keyword" }
+      }
+    }
+  }
+}
