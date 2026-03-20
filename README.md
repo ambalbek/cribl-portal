@@ -147,6 +147,110 @@ Copy the `encoded` value from the response and set it as `datastream.token` in `
 
 ---
 
+## Elasticsearch — ILM Policy and Datastream Template
+
+Run these in **Kibana → Management → Dev Tools** before the first document is indexed. Apply them in order.
+
+### Step 1 — ILM policy
+
+```json
+PUT _ilm/policy/cribl-onboarding-requests-policy
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "min_age": "0ms",
+        "actions": {
+          "rollover": {
+            "max_age":            "30d",
+            "max_primary_shard_size": "50gb"
+          }
+        }
+      },
+      "warm": {
+        "min_age": "30d",
+        "actions": {
+          "shrink":   { "number_of_shards": 1 },
+          "forcemerge": { "max_num_segments": 1 }
+        }
+      },
+      "delete": {
+        "min_age": "365d",
+        "actions": {
+          "delete": {}
+        }
+      }
+    }
+  }
+}
+```
+
+| Phase | Trigger | Action |
+|---|---|---|
+| **Hot** | Immediately | Rollover after 30 days or 50 GB |
+| **Warm** | 30 days after rollover | Shrink to 1 shard, force-merge for read efficiency |
+| **Delete** | 365 days after rollover | Permanently delete the backing index |
+
+---
+
+### Step 2 — Component template (mappings)
+
+```json
+PUT _component_template/cribl-onboarding-requests-mappings
+{
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp":         { "type": "date" },
+        "request_id":         { "type": "keyword" },
+        "app_id":             { "type": "keyword" },
+        "app_name":           { "type": "keyword" },
+        "region":             { "type": "keyword" },
+        "entitlement_groups": { "type": "keyword" },
+        "status":             { "type": "keyword" }
+      }
+    }
+  }
+}
+```
+
+All fields are `keyword` (exact match, aggregatable) except `@timestamp`. No free-text fields — every value is filterable and usable in Kibana dashboards without extra configuration.
+
+---
+
+### Step 3 — Index template
+
+```json
+PUT _index_template/cribl-onboarding-requests-template
+{
+  "index_patterns": ["cribl-onboarding-requests*"],
+  "data_stream":    {},
+  "composed_of":    ["cribl-onboarding-requests-mappings"],
+  "priority":       500,
+  "template": {
+    "settings": {
+      "index.lifecycle.name": "cribl-onboarding-requests-policy",
+      "number_of_shards":     1,
+      "number_of_replicas":   1
+    }
+  }
+}
+```
+
+### Step 4 — Create the datastream
+
+```json
+PUT _data_stream/cribl-onboarding-requests
+```
+
+Verify everything is wired up correctly:
+
+```json
+GET _data_stream/cribl-onboarding-requests
+```
+
+---
+
 ## Datastream document shape
 
 Each submitted request is stored as:
