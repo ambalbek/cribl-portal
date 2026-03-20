@@ -211,9 +211,11 @@ def submit():
     return jsonify({"request_id": request_id})
 
 
-@app.route("/portal/admin/update-status", methods=["POST"])
-@app.route("/admin/update-status", methods=["POST"])
+@app.route("/portal/admin/update-status", methods=["GET", "POST"])
+@app.route("/admin/update-status", methods=["GET", "POST"])
 def admin_update_status():
+    if request.method == "GET":
+        return render_template("admin.html")
     try:
         config = load_config()
     except Exception as exc:
