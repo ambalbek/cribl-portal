@@ -263,7 +263,7 @@ def admin_update_status():
         session.auth = (username, password)
 
     payload = {
-        "query":  {"term": {"request_id": request_id}},
+        "query":  {"term": {"request_id.keyword": request_id}},
         "script": {"source": f"ctx._source.status = '{status}'", "lang": "painless"},
     }
 
@@ -275,7 +275,7 @@ def admin_update_status():
             timeout=timeout,
         )
         resp.raise_for_status()
-        result = resp.json()
+        result  = resp.json()
         updated = result.get("updated", 0)
         if updated == 0:
             log.warning("admin/update-status — request_id=%s not found", request_id)
