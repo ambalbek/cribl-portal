@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy this file to config.json and fill in your values. config.json is gitignored.",
+
+  "datastream": {
+    "_comment": "Elasticsearch datastream where onboarding requests are stored.",
+    "elk_url":  "https://elk.example.com:9200",
+    "token":    "",
+    "username": "",
+    "password": "",
+    "index":    "cribl-onboarding-requests",
+    "skip_ssl": false
+  }
+}
