@@ -1,4 +1,4 @@
-# Cribl Portal — Application Onboarding Request Portal
+# ELK-ARO Onboarding Portal
 
 A lightweight, client-facing Flask app where teams submit application onboarding requests. Each submission is stored as a document in a dedicated Elasticsearch datastream for tracking and review.
 

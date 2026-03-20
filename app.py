@@ -15,6 +15,7 @@ Environment variables:
 import json
 import logging
 import os
+import re
 import sys
 import time
 import traceback
@@ -140,11 +141,6 @@ def es_index(doc: dict, config: dict) -> str:
 @app.route("/portal")
 @app.route("/portal/")
 def index():
-    try:
-        config = load_config()
-    except Exception as exc:
-        log.error("Failed to load config.json: %s", exc)
-        return f"Error loading config.json: {exc}", 500
     return render_template("request.html")
 
 
@@ -155,13 +151,15 @@ def submit():
     app_id   = (data.get("app_id")   or "").strip()
     app_name = (data.get("app_name") or "").strip()
     region   = (data.get("region")   or "").strip()
-    groups   = [g for g in (data.get("groups") or []) if g]
+    groups   = [grp for grp in (data.get("groups") or []) if grp]
 
     errors = []
-    if not app_id:                   errors.append("App ID is required.")
-    if not app_name:                 errors.append("App Name is required.")
-    if region not in ("azn", "azs"): errors.append("Region must be azn or azs.")
-    if not groups:                   errors.append("Select at least one entitlement group.")
+    if not app_id:                        errors.append("App ID is required.")
+    if not app_name:                      errors.append("App Name is required.")
+    elif not re.match(r"^\w+$", app_name):
+                                          errors.append("App Name must be a single word using only letters, numbers, and underscores.")
+    if region not in ("azn", "azs"):      errors.append("Region must be azn or azs.")
+    if not groups:                        errors.append("Select at least one entitlement group.")
     if errors:
         return jsonify({"errors": errors}), 400
 
