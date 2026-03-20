@@ -355,13 +355,13 @@
       </div>
 
       <div class="form-group">
-        <label for="app_id">App ID <span class="required-star">*</span></label>
-        <input type="text" id="app_id" placeholder="e.g. APP001" autocomplete="off" />
+        <label for="apmid">APM ID <span class="required-star">*</span></label>
+        <input type="text" id="apmid" placeholder="e.g. APP001" autocomplete="off" />
       </div>
 
       <div class="form-group">
-        <label for="app_name">App Name <span class="required-star">*</span></label>
-        <input type="text" id="app_name" placeholder="e.g. payments_service" autocomplete="off" />
+        <label for="appname">App Name <span class="required-star">*</span></label>
+        <input type="text" id="appname" placeholder="e.g. payments_service" autocomplete="off" />
         <p class="tag-hint">Must be a single word using underscores instead of spaces — e.g. <strong>payments_service</strong></p>
       </div>
 
@@ -471,8 +471,8 @@
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   function submitForm() {
-    const appId   = document.getElementById('app_id').value.trim();
-    const appName = document.getElementById('app_name').value.trim();
+    const appId   = document.getElementById('apmid').value.trim();
+    const appName = document.getElementById('appname').value.trim();
     const region  = document.querySelector('input[name="region"]:checked')?.value || '';
 
     const errors = [];
@@ -498,7 +498,7 @@
     fetch('/portal/api/submit', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ app_id: appId, app_name: appName, region, groups: tags }),
+      body:    JSON.stringify({ apmid: appId, appname: appName, region, groups: tags }),
     })
     .then(res => {
       console.log('[portal] submit response — status:', res.status, 'url:', res.url);
@@ -536,8 +536,8 @@
   }
 
   function resetForm() {
-    document.getElementById('app_id').value   = '';
-    document.getElementById('app_name').value = '';
+    document.getElementById('apmid').value   = '';
+    document.getElementById('appname').value = '';
     document.querySelector('input[name="region"][value="azn"]').checked = true;
     tags.length = 0;
     renderTags();

@@ -162,16 +162,16 @@ def submit():
               request.content_type, request.get_data(as_text=True)[:500])
 
     data     = request.get_json(silent=True) or {}
-    app_id   = (data.get("app_id")   or "").strip()
-    app_name = (data.get("app_name") or "").strip()
+    app_id   = (data.get("apmid")    or "").strip()
+    app_name = (data.get("appname")  or "").strip()
     region   = (data.get("region")   or "").strip()
     groups   = [grp for grp in (data.get("groups") or []) if grp]
 
-    log.info("submit — app_id=%r  app_name=%r  region=%r  groups=%s",
+    log.info("submit — apmid=%r  appname=%r  region=%r  groups=%s",
              app_id, app_name, region, groups)
 
     errors = []
-    if not app_id:                        errors.append("App ID is required.")
+    if not app_id:                        errors.append("APM ID is required.")
     if not app_name:                      errors.append("App Name is required.")
     elif not re.match(r"^\w+$", app_name):
                                           errors.append("App Name must be a single word using only letters, numbers, and underscores.")
@@ -191,8 +191,8 @@ def submit():
     doc = {
         "@timestamp":         now.isoformat(),
         "request_id":         request_id,
-        "app_id":             app_id,
-        "app_name":           app_name,
+        "apmid":              app_id,
+        "appname":            app_name,
         "region":             region,
         "entitlement_groups": groups,
         "status":             "pending",
@@ -209,6 +209,80 @@ def submit():
         return jsonify({"errors": [f"Failed to store request: {exc}"]}), 500
 
     return jsonify({"request_id": request_id})
+
+
+@app.route("/portal/admin/update-status", methods=["POST"])
+@app.route("/admin/update-status", methods=["POST"])
+def admin_update_status():
+    try:
+        config = load_config()
+    except Exception as exc:
+        return jsonify({"errors": [f"Could not load config.json: {exc}"]}), 500
+
+    secret = config.get("admin_secret", "").strip()
+    if not secret:
+        return jsonify({"errors": ["admin_secret is not configured"]}), 500
+
+    if request.headers.get("X-Admin-Secret", "") != secret:
+        log.warning("admin/update-status — unauthorized attempt from %s", request.remote_addr)
+        return jsonify({"errors": ["Unauthorized"]}), 403
+
+    data       = request.get_json(silent=True) or {}
+    request_id = (data.get("request_id") or "").strip()
+    status     = (data.get("status")     or "").strip()
+
+    if not request_id:
+        return jsonify({"errors": ["request_id is required"]}), 400
+    if status not in ("pending", "done", "rejected"):
+        return jsonify({"errors": ["status must be one of: pending, done, rejected"]}), 400
+
+    ds       = config.get("datastream", {})
+    base_url = ds.get("elk_url", "").strip().rstrip("/")
+    index    = ds.get("index", "logs-cribl-onboarding-requests")
+    skip_ssl = ds.get("skip_ssl", False)
+    timeout  = ds.get("timeout", 30)
+
+    if not base_url.startswith(("http://", "https://")):
+        base_url = "https://" + base_url
+
+    if skip_ssl:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    headers = {"Content-Type": "application/json"}
+    token    = ds.get("token",    "").strip()
+    username = ds.get("username", "").strip()
+    password = ds.get("password", "").strip()
+    if token:
+        headers["Authorization"] = f"ApiKey {token}"
+
+    session = http_client.Session()
+    session.verify = not skip_ssl
+    if not token and username:
+        session.auth = (username, password)
+
+    payload = {
+        "query":  {"term": {"request_id": request_id}},
+        "script": {"source": f"ctx._source.status = '{status}'", "lang": "painless"},
+    }
+
+    try:
+        resp = session.post(
+            f"{base_url}/{index}/_update_by_query",
+            json=payload,
+            headers=headers,
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        updated = result.get("updated", 0)
+        if updated == 0:
+            log.warning("admin/update-status — request_id=%s not found", request_id)
+            return jsonify({"errors": [f"Request ID {request_id!r} not found"]}), 404
+        log.info("admin/update-status — request_id=%s  status=%s  updated=%d", request_id, status, updated)
+        return jsonify({"request_id": request_id, "status": status, "updated": updated})
+    except Exception as exc:
+        log.error("admin/update-status failed — %s: %s", type(exc).__name__, exc)
+        return jsonify({"errors": [f"Failed to update status: {exc}"]}), 500
 
 
 @app.route("/health")
