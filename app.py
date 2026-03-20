@@ -110,7 +110,7 @@ def es_index(doc: dict, config: dict) -> str:
     """Write a document to the configured ES datastream. Returns the ES _id."""
     ds       = config.get("datastream", {})
     base_url = ds.get("elk_url", "").strip().rstrip("/")
-    index    = ds.get("index", "cribl-onboarding-requests")
+    index    = ds.get("index", "logs-cribl-onboarding-requests")
     skip_ssl = ds.get("skip_ssl", False)
     timeout  = ds.get("timeout", 30)
 
@@ -200,7 +200,7 @@ def submit():
 
     try:
         log.info("indexing to ES — index=%s  request_id=%s",
-                 config.get("datastream", {}).get("index", "cribl-onboarding-requests"),
+                 config.get("datastream", {}).get("index", "logs-cribl-onboarding-requests"),
                  request_id)
         es_id = es_index(doc, config)
         log.info("ES index OK — request_id=%s  es_id=%s", request_id, es_id)
@@ -214,6 +214,40 @@ def submit():
 @app.route("/health")
 def health():
     return "ok", 200
+
+
+@app.route("/health/es")
+def health_es():
+    try:
+        config  = load_config()
+        ds      = config.get("datastream", {})
+        base_url = ds.get("elk_url", "").strip().rstrip("/")
+        skip_ssl = ds.get("skip_ssl", False)
+        timeout  = ds.get("timeout", 30)
+
+        if not base_url.startswith(("http://", "https://")):
+            base_url = "https://" + base_url
+
+        if skip_ssl:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+        headers = {"Content-Type": "application/json"}
+        token    = ds.get("token",    "").strip()
+        username = ds.get("username", "").strip()
+        password = ds.get("password", "").strip()
+        if token:
+            headers["Authorization"] = f"ApiKey {token}"
+
+        session = http_client.Session()
+        session.verify = not skip_ssl
+        if not token and username:
+            session.auth = (username, password)
+
+        resp = session.get(f"{base_url}/_cluster/health", headers=headers, timeout=timeout)
+        return jsonify({"status": "ok", "es_status": resp.status_code, "es_body": resp.json()}), 200
+    except Exception as exc:
+        log.error("ES health check failed: %s", exc)
+        return jsonify({"status": "error", "error": str(exc)}), 500
 
 
 if __name__ == "__main__":
